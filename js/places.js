@@ -2,12 +2,11 @@
  * places.js - Catálogo offline de lugares frecuentes de Costa Rica + Geocodificación y cálculo de distancia
  */
 
-// Lugares frecuentes y cabeceras / hitos clave de Costa Rica (coordenadas WGS84)
+// Lugares frecuentes y cabeceras / hitos clave de Costa Rica (coordenadas WGS84 oficiales)
 export const CR_KEY_PLACES = [
-  // San José
+  // San José y Montes de Oca
   { name: 'San José Centro, San José', lat: 9.9333, lon: -84.0833 },
-  { name: 'Calle Los Mota, San José', lat: 9.9250, lon: -84.0950 },
-  { name: 'Tecnova Soluciones, San José', lat: 9.9405, lon: -84.0920 },
+  { name: 'Tecnova Soluciones, Los Yoses, San Pedro', lat: 9.9314, lon: -84.0612 },
   { name: 'Zapote, San José', lat: 9.9198, lon: -84.0531 },
   { name: 'San Pedro, Montes de Oca', lat: 9.9328, lon: -84.0519 },
   { name: 'Curridabat, San José', lat: 9.9157, lon: -84.0354 },
@@ -162,33 +161,49 @@ export async function searchPlaces(query) {
 }
 
 /**
- * Intenta resolver las coordenadas de un nombre de lugar
+ * Intenta resolver las coordenadas de un nombre de lugar o dirección exacta.
+ * Evita emparejamientos ambiguos o aproximaciones erróneas.
  */
 export async function resolveCoordinates(placeName) {
   const clean = (placeName || '').trim();
-  if (!clean) return null;
+  if (!clean || clean.length < 2) return null;
 
-  // Buscar en cache
+  // 1. Buscar en cache en memoria
   if (geocodeCache.has(clean)) {
     return geocodeCache.get(clean);
   }
 
-  // Buscar coincidencia local
-  const local = CR_KEY_PLACES.find(p => p.name.toLowerCase().includes(clean.toLowerCase()) || clean.toLowerCase().includes(p.name.toLowerCase()));
-  if (local) {
-    geocodeCache.set(clean, { lat: local.lat, lon: local.lon });
-    return { lat: local.lat, lon: local.lon };
+  const cleanLower = clean.toLowerCase();
+
+  // 2. Buscar coincidencia exacta o de prefijo directo en el catálogo local verificado
+  const exactLocal = CR_KEY_PLACES.find(p => {
+    const pLower = p.name.toLowerCase();
+    return pLower === cleanLower || pLower.startsWith(cleanLower + ',') || cleanLower.startsWith(pLower);
+  });
+  if (exactLocal) {
+    const coord = { lat: exactLocal.lat, lon: exactLocal.lon };
+    geocodeCache.set(clean, coord);
+    return coord;
   }
 
-  // Búsqueda en línea
+  // 3. Geocodificación precisa en línea (OpenStreetMap / Nominatim)
   try {
     const results = await searchPlaces(clean);
     if (results && results.length > 0) {
+      // Tomar el resultado con mayor relevancia
       const coord = { lat: results[0].lat, lon: results[0].lon };
       geocodeCache.set(clean, coord);
       return coord;
     }
   } catch (e) {}
+
+  // 4. Búsqueda secundaria si contiene palabras clave locales específicas
+  const secondaryLocal = CR_KEY_PLACES.find(p => p.name.toLowerCase().includes(cleanLower));
+  if (secondaryLocal) {
+    const coord = { lat: secondaryLocal.lat, lon: secondaryLocal.lon };
+    geocodeCache.set(clean, coord);
+    return coord;
+  }
 
   return null;
 }

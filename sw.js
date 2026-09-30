@@ -2,7 +2,7 @@
  * sw.js - Service Worker para funcionamiento 100% offline y PWA en GitHub Pages
  */
 
-const CACHE_NAME = 'kilometraje-pwa-v2.2.0';
+const CACHE_NAME = 'kilometraje-pwa-v2.3.0';
 
 const ASSETS_TO_CACHE = [
   './',
