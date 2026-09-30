@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Gradiente Naranja Vibrante y Moderno -->
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B00"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+
+    <!-- Sombra suave para elementos blancos -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#7C2D12" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo Cuadrado con Bordes Redondeados (Squircle para icono de app / PWA) -->
+  <rect width="512" height="512" rx="116" fill="url(#orangeGrad)"/>
+
+  <!-- Trazado de Ruta curvada con línea de cálculo/kilometraje -->
+  <!-- Camino / Ruta estilizada -->
+  <path d="M 120 370 C 140 240, 240 280, 260 190 C 275 125, 360 130, 392 180" 
+        fill="none" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#softGlow)" />
+
+  <!-- Segmentos/Tramos de cálculo (guiones sobre la ruta) -->
+  <path d="M 120 370 C 140 240, 240 280, 260 190 C 275 125, 360 130, 392 180" 
+        fill="none" 
+        stroke="#FFEDD5" 
+        stroke-width="12" 
+        stroke-linecap="round"
+        stroke-dasharray="14 20"
+        opacity="0.85" />
+
+  <!-- Punto de Origen A (Nodo de partida) -->
+  <circle cx="120" cy="370" r="28" fill="#FFFFFF" filter="url(#softGlow)"/>
+  <circle cx="120" cy="370" r="14" fill="#EA580C"/>
+
+  <!-- Pin de Destino / Meta en la parte superior derecha -->
+  <g transform="translate(392, 175)" filter="url(#softGlow)">
+    <path d="M 0 -70 C -28 -70 -50 -48 -50 -20 C -50 18 0 65 0 65 C 0 65 50 18 50 -20 C 50 -48 28 -70 0 -70 Z" fill="#FFFFFF"/>
+    <!-- Símbolo matemático / cálculo dentro del Pin (Símbolo de cálculo de tarifa/multiplicación) -->
+    <circle cx="0" cy="-20" r="18" fill="#EA580C"/>
+    <!-- Ícono de kilometraje / odómetro en el centro del pin -->
+    <path d="M -8 -20 L 8 -20 M 0 -28 L 0 -12" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Pequeños marcadores de kilometraje / tramo intermedio -->
+  <circle cx="260" cy="190" r="16" fill="#FFFFFF" filter="url(#softGlow)"/>
+  <circle cx="260" cy="190" r="8" fill="#EA580C"/>
+
+  <!-- Símbolo de cálculo matemático / tarifa en la esquina inferior derecha -->
+  <g transform="translate(365, 365)" filter="url(#softGlow)">
+    <rect x="-42" y="-42" width="84" height="84" rx="22" fill="#FFFFFF" fill-opacity="0.95"/>
+    <!-- Signos de cálculo (+ / = / km) estilizados -->
+    <!-- Signo de suma / cálculo -->
+    <path d="M -22 -14 L -8 -14 M -15 -21 L -15 -7" stroke="#EA580C" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Signo igual de resultado -->
+    <path d="M 8 -18 L 22 -18 M 8 -10 L 22 -10" stroke="#EA580C" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Texto 'KM' minimalista -->
+    <text x="0" y="24" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="19" font-weight="900" fill="#EA580C" letter-spacing="1">KM</text>
+  </g>
+</svg>

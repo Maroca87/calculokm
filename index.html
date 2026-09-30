@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Kilometraje y Cobro - PWA</title>
+  
+  <meta name="description" content="Calcula recorridos al instante y determina el monto exacto a cobrar por kilometraje con tarifas oficiales.">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kilometraje">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <!-- Estilos CSS -->
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/print.css">
+</head>
+<body>
+
+  <!-- Barra Superior Minimalista -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-icon">
+        <img src="./icons/icon.svg" alt="Logo Kilometraje" width="26" height="26">
+      </div>
+      <div>
+        <div class="brand-title">Kilometraje & Cobro</div>
+        <div class="brand-subtitle">Tarifas Oficiales CGR</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Selector Rápido de Vehículo Activo -->
+      <button class="pill-btn vehicle-pill" id="open-vehicle-modal-btn" title="Cambiar o configurar vehículo">
+        🚗 <span id="header-vehicle-name">Toyota Corolla</span>
+      </button>
+
+      <!-- Botón Tema Claro/Oscuro -->
+      <button class="icon-btn" id="theme-toggle-btn" aria-label="Cambiar tema">
+        <span id="theme-icon">☀️</span>
+      </button>
+
+      <!-- Botón Instalación PWA (si está disponible) -->
+      <button class="icon-btn" id="install-btn" style="display: none;" title="Instalar en celular">
+        📲
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal de la App -->
+  <main class="container">
+
+    <!-- Banner de Instalación Rápida PWA -->
+    <div class="install-banner" id="pwa-install-banner" style="display: none;">
+      <div class="install-banner-text">
+        <strong>📱 Instalar App en el Celular</strong>
+        <span>Úsala desde la pantalla de inicio incluso sin conexión</span>
+      </div>
+      <button class="btn-sm btn-accent" id="banner-install-btn">Instalar</button>
+    </div>
+
+    <!-- ====================================================================
+         BLOQUE 1: FLUJO PRINCIPAL DE RUTA
+         Origen → Destinos → Destino ... → Regreso Opcional
+         ==================================================================== -->
+    <section class="card route-card">
+      <div class="route-timeline">
+
+        <!-- PUNTO DE ORIGEN -->
+        <div class="route-node origin-node">
+          <div class="node-bullet origin-bullet">A</div>
+          <div class="node-content">
+            <div class="node-header">
+              <label class="node-label" for="origin-input">Punto de Origen</label>
+              <button type="button" class="geo-btn" id="geo-origin-btn" title="Usar mi ubicación actual como origen">
+                📍 Mi ubicación
+              </button>
+            </div>
+            <div class="input-autocomplete-wrap">
+              <input type="text" class="text-input" id="origin-input" placeholder="Buscar lugar o escribir dirección" value="" autocomplete="off">
+              <div class="autocomplete-dropdown" id="origin-suggestions"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LISTA DINÁMICA DE DESTINOS -->
+        <div class="destinations-stack" id="destinations-container">
+          <!-- Renderizado dinámicamente con Destino 1, 2, ..., botones de subir/bajar y eliminar -->
+        </div>
+
+      </div>
+
+      <!-- BOTÓN AGREGAR DESTINO -->
+      <div class="route-actions-bar">
+        <button type="button" class="btn btn-secondary add-dest-btn" id="add-destination-btn">
+          <span>➕</span> Agregar Destino
+        </button>
+
+        <button type="button" class="btn btn-outline-clean calc-btn" id="auto-calc-distances-btn" title="Calcular distancias por carretera automáticamente">
+          <span>⚡</span> Calcular KM de Ruta
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
+         BLOQUE 2: DESGLOSE DE TRAMOS
+         Origen → Destino = XX.X km
+         ==================================================================== -->
+    <section class="card legs-card" id="legs-section">
+      <div class="card-title-row">
+        <span class="section-title">📍 Tramos del Recorrido</span>
+        <span class="badge-count" id="legs-count-badge">0 tramos</span>
+      </div>
+      <div class="legs-list" id="legs-list">
+        <!-- Renderizado dinámico: Origen → Destino = XX.X km -->
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         BLOQUE 3: RESULTADOS PRINCIPALES DESTACADOS
+         KM TOTALES | TARIFA | TOTAL A COBRAR
+         ==================================================================== -->
+    <section class="results-dashboard">
+      
+      <div class="results-main-card">
+        <div class="result-row-highlight">
+          <div class="result-metric">
+            <span class="result-label">KM TOTALES</span>
+            <div class="result-value" id="kpi-total-km">0.0 km</div>
+          </div>
+
+          <div class="result-metric text-right">
+            <span class="result-label">TARIFA OFICIAL</span>
+            <div class="result-rate-badge" id="kpi-rate-km" style="cursor: pointer;" title="Toca para ver la tabla de verdad de tarifas">₡ 0 / km</div>
+            <span class="result-sub-cat" id="kpi-rate-cat" style="cursor: pointer;" title="Toca para ver la tabla de verdad de tarifas">Vehículo Liviano Gasolina B</span>
+          </div>
+        </div>
+
+        <div class="total-charge-banner">
+          <div class="charge-label">TOTAL A COBRAR</div>
+          <div class="charge-amount" id="kpi-total-charge">₡ 0</div>
+          <div class="charge-formula" id="kpi-formula-preview">0.0 km × ₡0.00 = ₡0</div>
+        </div>
+      </div>
+
+      <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+      <div class="action-buttons-grid">
+        <button class="btn btn-primary" id="open-justification-btn">
+          📄 Ver y Compartir Justificación
+        </button>
+        <button class="btn btn-save-history" id="save-history-btn" title="Guardar este recorrido en el historial">
+          💾 Guardar en Historial
+        </button>
+        <button class="btn btn-ghost" id="clear-route-btn">
+          🗑️ Limpiar Recorrido
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
+         BLOQUE 4: HISTORIAL DE RECORRIDOS
+         Fecha, Origen, Destinos, KM por tramo, KM totales, Tarifa y Monto
+         ==================================================================== -->
+    <section class="card history-card" id="history-section">
+      <div class="card-title-row">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="section-title">🕒 Historial de Recorridos</span>
+          <span class="badge-count" id="history-count-badge">0</span>
+        </div>
+        <button type="button" class="btn-text-danger" id="clear-history-btn" title="Borrar historial">
+          Vaciar
+        </button>
+      </div>
+
+      <div class="history-list" id="history-list">
+        <!-- Renderizado dinámico con los recorridos más recientes primero -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================================
+       MODAL: GESTIÓN DE VEHÍCULO (Solo datos para determinar la tarifa CGR)
+       Marca, Modelo, Año, Motor/cc, Combustible, 4x4
+       ==================================================================== -->
+  <div class="modal-backdrop" id="vehicle-modal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">🚗 Vehículo para Tarifa CGR</h3>
+        <button class="close-icon-btn" id="close-vehicle-modal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Tarjeta de Tarifa Resultante en Vivo -->
+        <div class="rate-preview-card">
+          <div class="rate-preview-header">
+            <span class="rate-preview-category" id="modal-rate-cat">Vehículo Liviano Gasolina B</span>
+            <span class="rate-preview-val" id="modal-rate-val">₡ 221.77 / km</span>
+          </div>
+          <div class="rate-preview-note" id="modal-rate-note">
+            Tarifa determinada según la tabla oficial de la Contraloría General de la República (CGR).
+          </div>
+          <button type="button" class="btn-rates-link" id="open-rates-modal-btn">
+            📊 Ver Tabla de Verdad de Tarifas CGR
+          </button>
+        </div>
+
+        <!-- Selector rápido de vehículos guardados -->
+        <div class="field-wrap" style="margin-top: 14px;">
+          <label class="field-label">Seleccionar Vehículo Guardado:</label>
+          <div class="quick-vehicles-list" id="quick-vehicles-list">
+            <!-- Pills dinámicos -->
+          </div>
+        </div>
+
+        <hr class="modal-divider" />
+
+        <!-- Formulario ordenado de características del vehículo -->
+        <div class="form-grid-2">
+          <div class="field-wrap">
+            <label class="field-label" for="v-brand">Marca</label>
+            <input type="text" class="text-input" id="v-brand" placeholder="Marca del vehículo">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label" for="v-model">Modelo</label>
+            <input type="text" class="text-input" id="v-model" placeholder="Modelo">
+          </div>
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label" for="v-year">Año de Fabricación</label>
+          <div class="select-wrapper">
+            <select class="text-select" id="v-year">
+              <option value="2025">2025 (Nuevo / 0 años)</option>
+              <option value="2024">2024 (1 año)</option>
+              <option value="2023">2023 (2 años)</option>
+              <option value="2022" selected>2022 (3 años)</option>
+              <option value="2021">2021 (4 años)</option>
+              <option value="2020">2020 (5 años)</option>
+              <option value="2019">2019 (6 años)</option>
+              <option value="2018">2018 (7 años)</option>
+              <option value="2017">2017 (8 años)</option>
+              <option value="2016">2016 (9 años)</option>
+              <option value="2015">2015 o anterior (10+ años)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label" for="v-fuel">Tipo de Combustible</label>
+          <div class="select-wrapper">
+            <select class="text-select" id="v-fuel">
+              <option value="gasolina">Gasolina</option>
+              <option value="diesel">Diésel</option>
+              <option value="hibrido">Híbrido</option>
+              <option value="electrico">100% Eléctrico</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-wrap">
+          <label class="field-label" for="v-body">Tipo de Carrocería</label>
+          <div class="select-wrapper">
+            <select class="text-select" id="v-body">
+              <option value="sedan">Automóvil / Sedán / SUV Liviano</option>
+              <option value="rural_pickup">Rural / Familiar / Pick-up</option>
+              <option value="moto">Motocicleta</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-wrap" id="wrap-cc">
+          <label class="field-label" for="v-cc">Cilindrada Motor</label>
+          <div class="input-unit-wrap">
+            <input type="number" class="text-input" id="v-cc" placeholder="Cilindrada" step="50" min="0">
+            <span class="unit-text">cc</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cancel-vehicle-btn">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="save-vehicle-btn">Guardar Vehículo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: RESUMEN Y JUSTIFICACIÓN (Ver, Compartir e Imprimir)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="justification-modal" style="display: none;">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">📄 Resumen de Justificación</h3>
+        <button class="close-icon-btn" id="close-justification-modal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body" id="justification-container">
+        <!-- Renderizado dinámico desde report.js -->
+      </div>
+
+      <div class="modal-footer modal-footer-actions">
+        <button type="button" class="btn btn-secondary" id="close-just-btn">Cerrar</button>
+        <button type="button" class="btn btn-accent" id="copy-share-btn">
+          📤 Compartir / Copiar
+        </button>
+        <button type="button" class="btn btn-primary" id="print-btn">
+          🖨️ Imprimir / PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: TABLA DE VERDAD DE TARIFAS CGR
+       Matriz oficial de tarifas por antigüedad y tipo de vehículo
+       ==================================================================== -->
+  <div class="modal-backdrop" id="rates-modal" style="display: none;">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">📊 Tabla Oficial de Tarifas CGR (₡/km)</h3>
+        <button class="close-icon-btn" id="close-rates-modal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body" id="rates-table-container">
+        <!-- Renderizado dinámico desde app.js -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="close-rates-btn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de Notificaciones -->
+  <div class="toast-popup" id="toast-popup"></div>
+
+  <!-- Lógica Principal -->
+  <script type="module" src="./js/app.js"></script>
+
+  <!-- Service Worker para PWA Offline -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('PWA Service Worker activo:', reg.scope))
+          .catch(err => console.warn('SW error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
