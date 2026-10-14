@@ -1,5 +1,5 @@
 {
-  "name": "Kilometraje y Cobro - Costa Rica",
+  "name": "Kilometraje",
   "short_name": "Kilometraje",
   "description": "Calculadora rápida de recorridos y cobro por kilometraje con tarifas oficiales de la CGR Costa Rica.",
   "start_url": "./index.html",

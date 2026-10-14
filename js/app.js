@@ -19,7 +19,7 @@ class App {
     this.searchDebounceTimer = null;
 
     this.initDom();
-    this.initTheme();
+    document.documentElement.setAttribute('data-theme', 'dark');
     this.bindEvents();
     this.loadSavedTripOrDefaults();
     this.renderHistory();
@@ -32,8 +32,6 @@ class App {
       // Header
       headerVehicleName: document.getElementById('header-vehicle-name'),
       openVehicleModalBtn: document.getElementById('open-vehicle-modal-btn'),
-      themeToggleBtn: document.getElementById('theme-toggle-btn'),
-      themeIcon: document.getElementById('theme-icon'),
       installBtn: document.getElementById('install-btn'),
       pwaBanner: document.getElementById('pwa-install-banner'),
       bannerInstallBtn: document.getElementById('banner-install-btn'),
@@ -44,7 +42,6 @@ class App {
       geoOriginBtn: document.getElementById('geo-origin-btn'),
       destinationsContainer: document.getElementById('destinations-container'),
       addDestinationBtn: document.getElementById('add-destination-btn'),
-      autoCalcDistancesBtn: document.getElementById('auto-calc-distances-btn'),
 
       // Legs Breakdown
       legsSection: document.getElementById('legs-section'),
@@ -103,21 +100,6 @@ class App {
     };
   }
 
-  initTheme() {
-    const savedTheme = localStorage.getItem('cgr_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    this.dom.themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-  }
-
-  toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('cgr_theme', next);
-    this.dom.themeIcon.textContent = next === 'dark' ? '☀️' : '🌙';
-    this.showToast(`Modo ${next === 'dark' ? 'oscuro' : 'claro'} activado`);
-  }
-
   showToast(message) {
     this.dom.toastPopup.textContent = message;
     this.dom.toastPopup.classList.add('show');
@@ -128,16 +110,22 @@ class App {
   }
 
   bindEvents() {
-    // Tema
-    this.dom.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
-
     // Origen
     this.dom.originInput.addEventListener('input', (e) => {
       this.tripManager.setOrigin(e.target.value);
-      this.handleAutocomplete(e.target.value, this.dom.originSuggestions, (selected) => {
+      this.handleAutocomplete(e.target.value, this.dom.originSuggestions, async (selected) => {
         this.dom.originInput.value = selected.name;
         this.tripManager.setOrigin(selected.name, selected.lat, selected.lon);
         this.dom.originSuggestions.classList.remove('show');
+        // Recalcular primer tramo si ya hay primer destino
+        if (this.tripManager.destinations.length > 0 && this.tripManager.destinations[0].name) {
+          const firstDest = this.tripManager.destinations[0];
+          const km = await calculateRouteDistance(selected, firstDest);
+          if (km !== null && km > 0) {
+            this.tripManager.updateDestination(firstDest.id, { distanceKm: km });
+            this.renderDestinations();
+          }
+        }
       });
     });
 
@@ -160,9 +148,6 @@ class App {
         inputs[inputs.length - 1].focus();
       }
     });
-
-    // Auto-cálculo de distancias de ruta
-    this.dom.autoCalcDistancesBtn.addEventListener('click', () => this.autoCalculateAllDistances());
 
     // Acciones de viaje
     this.dom.saveHistoryBtn.addEventListener('click', () => this.saveCurrentTripToHistory());
@@ -281,6 +266,16 @@ class App {
         this.dom.originInput.value = placeName;
         this.tripManager.setOrigin(placeName, lat, lon);
         this.showToast('📍 Origen actualizado con tu ubicación');
+
+        // Recalcular automáticamente primer tramo si ya hay destino configurado
+        if (this.tripManager.destinations.length > 0 && this.tripManager.destinations[0].name) {
+          const firstDest = this.tripManager.destinations[0];
+          const km = await calculateRouteDistance({ name: placeName, lat, lon }, firstDest);
+          if (km !== null && km > 0) {
+            this.tripManager.updateDestination(firstDest.id, { distanceKm: km });
+            this.renderDestinations();
+          }
+        }
       },
       (err) => {
         console.warn('Geo error', err);
@@ -288,33 +283,6 @@ class App {
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
-  }
-
-  async autoCalculateAllDistances() {
-    const list = this.tripManager.destinations;
-    if (!list || list.length === 0) return;
-
-    this.showToast('Calculando distancias de ruta...');
-    this.dom.autoCalcDistancesBtn.disabled = true;
-
-    try {
-      let prevPoint = this.tripManager.origin;
-      for (const dest of list) {
-        if (dest.name) {
-          const dist = await calculateRouteDistance(prevPoint, dest);
-          if (dist !== null && dist > 0) {
-            this.tripManager.updateDestination(dest.id, { distanceKm: dist });
-          }
-        }
-        prevPoint = dest;
-      }
-      this.renderDestinations();
-      this.showToast('✓ Distancias calculadas con éxito');
-    } catch (e) {
-      this.showToast('No se pudo calcular la ruta en línea');
-    } finally {
-      this.dom.autoCalcDistancesBtn.disabled = false;
-    }
   }
 
   renderDestinations() {
@@ -371,6 +339,19 @@ class App {
         });
       });
 
+      // Si el usuario escribe manualmente y cambia el foco, auto-calcular la distancia si falta
+      nameInput.addEventListener('change', async () => {
+        const currentDest = this.tripManager.destinations.find(d => d.id === dest.id);
+        if (currentDest && currentDest.name && (!currentDest.distanceKm || currentDest.distanceKm === 0)) {
+          const prev = index === 0 ? this.tripManager.origin : this.tripManager.destinations[index - 1];
+          const km = await calculateRouteDistance(prev, currentDest);
+          if (km !== null && km > 0) {
+            this.tripManager.updateDestination(dest.id, { distanceKm: km });
+            kmInput.value = km;
+          }
+        }
+      });
+
       kmInput.addEventListener('input', (e) => {
         this.tripManager.updateDestination(dest.id, { distanceKm: parseFloat(e.target.value) || 0 });
       });
@@ -406,7 +387,7 @@ class App {
     const c = calc.classification;
 
     // Header Vehicle
-    this.dom.headerVehicleName.textContent = `${v.brand} ${v.model || ''}`;
+    this.dom.headerVehicleName.textContent = `${v.brand}${v.model ? ' ' + v.model : ''}`;
 
     // Tramos del recorrido
     this.renderLegsList(calc.legs);
@@ -570,7 +551,7 @@ class App {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'v-pill-option' + (v.id === active.id ? ' active' : '');
-      btn.textContent = `🚗 ${v.brand} ${v.model || ''}`;
+      btn.textContent = `🚗 ${v.brand}${v.model ? ' ' + v.model : ''}`;
       btn.addEventListener('click', () => {
         this.vehicleManager.setActiveVehicle(v.id);
         this.populateModalWithActiveVehicle();
@@ -595,7 +576,7 @@ class App {
     const active = this.vehicleManager.getActiveVehicle();
     return {
       id: active.id,
-      brand: this.dom.vBrand.value.trim() || 'Vehículo',
+      brand: this.dom.vBrand.value.trim() || 'Mi Vehículo',
       model: this.dom.vModel.value.trim(),
       year: parseInt(this.dom.vYear.value, 10) || BASE_YEAR,
       fuel: this.dom.vFuel.value,

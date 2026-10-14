@@ -13,29 +13,11 @@ const KEYS = {
 export const DEFAULT_VEHICLES = [
   {
     id: 'veh-1',
-    brand: 'Toyota',
-    model: 'Corolla',
+    brand: 'Mi Vehículo',
+    model: '',
     year: 2022,
-    engineCc: 1800,
+    engineCc: 1600,
     fuel: 'gasolina',
-    bodyType: 'sedan'
-  },
-  {
-    id: 'veh-2',
-    brand: 'Toyota',
-    model: 'Hilux',
-    year: 2021,
-    engineCc: 2800,
-    fuel: 'diesel',
-    bodyType: 'rural_pickup'
-  },
-  {
-    id: 'veh-3',
-    brand: 'BYD',
-    model: 'Yuan Plus',
-    year: 2024,
-    engineCc: 0,
-    fuel: 'electrico',
     bodyType: 'sedan'
   }
 ];
@@ -45,8 +27,20 @@ export const Storage = {
     try {
       const data = localStorage.getItem(KEYS.VEHICLES);
       if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        let parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filtrar carros de ejemplo (Toyota y BYD) si estuvieran guardados en caché previo
+          const filtered = parsed.filter(v => !(
+            (v.brand === 'Toyota' && (v.model === 'Corolla' || v.model === 'Hilux')) ||
+            (v.brand === 'BYD' && v.model === 'Yuan Plus')
+          ));
+          if (filtered.length > 0) {
+            if (filtered.length !== parsed.length) {
+              this.saveVehicles(filtered);
+            }
+            return filtered;
+          }
+        }
       }
       this.saveVehicles(DEFAULT_VEHICLES);
       return DEFAULT_VEHICLES;

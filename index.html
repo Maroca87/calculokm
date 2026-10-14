@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Kilometraje y Cobro - PWA</title>
+  <title>Kilometraje - PWA</title>
   
   <meta name="description" content="Calcula recorridos al instante y determina el monto exacto a cobrar por kilometraje con tarifas oficiales.">
   <meta name="theme-color" content="#090d16">
@@ -29,7 +29,7 @@
         <img src="./icons/icon.svg" alt="Logo Kilometraje" width="26" height="26">
       </div>
       <div>
-        <div class="brand-title">Kilometraje & Cobro</div>
+        <div class="brand-title">Kilometraje</div>
         <div class="brand-subtitle">Tarifas Oficiales CGR</div>
       </div>
     </div>
@@ -37,12 +37,7 @@
     <div class="header-actions">
       <!-- Selector Rápido de Vehículo Activo -->
       <button class="pill-btn vehicle-pill" id="open-vehicle-modal-btn" title="Cambiar o configurar vehículo">
-        🚗 <span id="header-vehicle-name">Toyota Corolla</span>
-      </button>
-
-      <!-- Botón Tema Claro/Oscuro -->
-      <button class="icon-btn" id="theme-toggle-btn" aria-label="Cambiar tema">
-        <span id="theme-icon">☀️</span>
+        🚗 <span id="header-vehicle-name">Mi Vehículo</span>
       </button>
 
       <!-- Botón Instalación PWA (si está disponible) -->
@@ -99,10 +94,6 @@
       <div class="route-actions-bar">
         <button type="button" class="btn btn-secondary add-dest-btn" id="add-destination-btn">
           <span>➕</span> Agregar Destino
-        </button>
-
-        <button type="button" class="btn btn-outline-clean calc-btn" id="auto-calc-distances-btn" title="Calcular distancias por carretera automáticamente">
-          <span>⚡</span> Calcular KM de Ruta
         </button>
       </div>
 
